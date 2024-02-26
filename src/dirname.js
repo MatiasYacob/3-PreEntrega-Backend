@@ -46,35 +46,47 @@ export const authToken = (req, res, next) => {
 }
 
 
-// Para manejo de errores
+// Para passportCall
 export const passportCall = (strategy) => {
     return async (req, res, next) => {
-        console.log("Entrando a llamar strategy: ");
-        console.log(strategy);
-        passport.authenticate(strategy, function (err, user, info) {
-            if (err) return next(err);
-            if (!user) {
-                return res.status(401).send({ error: info.messages ? info.messages : info.toString() });
-            }
-            console.log("Usuario obtenido del strategy: ");
-            console.log(user);
-            req.user = user;
-            next();
-        })(req, res, next);
-    }
+        try {
+            await passport.authenticate(strategy, function (err, user, info) {
+                if (err) return next(err);
+                if (!user) {
+                    return res.status(401).send({ error: info.messages ? info.messages : info.toString() });
+                }
+                req.user = user;
+                next();
+            })(req, res, next);
+        } catch (error) {
+            console.error("Error en passportCall:", error);
+            next(error);
+        }
+    };
 };
 
-// Para manejo de Auth
+// Para authorization
 export const authorization = (role) => {
     return async (req, res, next) => {
-        if (!req.user) return res.status(401).send("Unauthorized: User not found in JWT")
+        try {
+            if (!req.user) return res.status(401).send("Unauthorized: User not found in JWT");
 
-        if (req.user.role !== role) {
-            return res.status(403).send("Forbidden: El usuario no tiene permisos con este rol.");
+            const userRole = req.user.role.toUpperCase();  
+            const requiredRole = role.toUpperCase();  
+
+            if (userRole !== requiredRole) {
+                return res.status(403).send("Forbidden: El usuario no tiene permisos con este rol.");
+            }
+
+            next();
+        } catch (error) {
+            console.error("Error en authorization:", error);
+            next(error);
         }
-        next()
-    }
+    };
 };
+
+
 
 // Exportar __dirname al final
 export { __dirname };
