@@ -42,7 +42,7 @@ router.get("/cart", authorize(["USUARIO"]), async (req, res) => {
     }
 });
 
-router.get('/session', authorize(["USER"]), (req, res) => {
+router.get('/session', authorize(["USUARIO"]), (req, res) => {
     if (req.session.counter) {
         req.session.counter++;
         res.send(`Se ha visitado este sitio: ${req.session.counter} veces.`);

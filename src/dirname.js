@@ -7,46 +7,46 @@ import passport from 'passport';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-//Generamos el hash
+// Generamos el hash
 export const createHash = password => bcrypt.hashSync(password, bcrypt.genSaltSync(10));
 
-//Validamos el hash
-
+// Validamos el hash
 export const isValidPassword = (user, password) => {
     console.log(`Datos a validar: user-password: ${user.password}, password: ${password} `);
     return bcrypt.compareSync(password, user.password);
 }
 
-//JWT
-
+// JWT
 export const PRIVATE_KEY = "CoderhouseBackendCourseSecretKeyJWT"
 
-export const generateJWToken = (user)=>{
-
-   
-    return jwt.sign({ user }, PRIVATE_KEY,{expiresIn: "7d"})
-
+export const generateJWToken = (user) => {
+    return jwt.sign({ user }, PRIVATE_KEY, { expiresIn: "7d" });
 }
-//AuthToken
-export const authToken = (req, res, next) =>{
+
+export const authToken = (req, res, next) => {
     const authHeader = req.headers.authorization;
     console.log("Token Present In Header Auth");
+    console.log('Headers:', req.headers);
     console.log(authHeader);
-    if(!authHeader){
-        return res.status(401).send({error: "pato User Not Authenticated or missing token."})
+    if (!authHeader) {
+        return res.status(401).send({ error: "User pato Not Authenticated or missing token." })
     }
     const token = authHeader.split(' ')[1];
 
-    jwt.verify(token, PRIVATE_KEY, (error, credentials)=>{
-        if (error) return res.status(403).send({error:"Token invalid, Unauthorized!"})
-        //tokken ok
+    jwt.verify(token, PRIVATE_KEY, (error, credentials) => {
+        if (error) {
+            console.error("Error verifying token:", error);
+            return res.status(403).send({ error: "Token invalid, Unauthorized!" })
+        }
+        // Token ok
         req.user = credentials.user;
-        console.log(req.user);
+        console.log("User credentials from token:", req.user);
         next();
     })
 }
 
-// para manejo de errores
+
+// Para manejo de errores
 export const passportCall = (strategy) => {
     return async (req, res, next) => {
         console.log("Entrando a llamar strategy: ");
@@ -64,8 +64,7 @@ export const passportCall = (strategy) => {
     }
 };
 
-
-// para manejo de Auth
+// Para manejo de Auth
 export const authorization = (role) => {
     return async (req, res, next) => {
         if (!req.user) return res.status(401).send("Unauthorized: User not found in JWT")
@@ -76,9 +75,6 @@ export const authorization = (role) => {
         next()
     }
 };
-//********************** */
 
-
-
-
+// Exportar __dirname al final
 export { __dirname };
