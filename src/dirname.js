@@ -65,14 +65,17 @@ export const passportCall = (strategy) => {
     };
 };
 
-// Para authorization
+// Middleware de autorización
 export const authorization = (role) => {
     return async (req, res, next) => {
         try {
             if (!req.user) return res.status(401).send("Unauthorized: User not found in JWT");
 
-            const userRole = req.user.role.toUpperCase();  
-            const requiredRole = role.toUpperCase();  
+            // Aquí puedes acceder al _id del usuario desde el jwt_payload
+            const userId = req.user._id;
+
+            const userRole = req.user.role.toUpperCase();
+            const requiredRole = role.toUpperCase();
 
             if (userRole !== requiredRole) {
                 return res.status(403).send("Forbidden: El usuario no tiene permisos con este rol.");
@@ -85,6 +88,7 @@ export const authorization = (role) => {
         }
     };
 };
+
 
 
 

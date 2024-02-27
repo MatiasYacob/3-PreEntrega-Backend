@@ -4,13 +4,14 @@ const manager = new CartManager();
 
 export const createCart = async (req, res) => {
     try {
+        const userId = req.user._id;  // Ajusta según cómo obtienes el ID del usuario
         const { products } = req.body;
 
         if (!Array.isArray(products)) {
             return res.status(400).json({ error: 'La lista de productos es inválida' });
         }
 
-        const createdCart = await manager.createCart(products);
+        const createdCart = await CartManager.createCart(userId, products);
 
         if (!createdCart) {
             return res.status(500).json({ error: 'Error al crear el carrito' });

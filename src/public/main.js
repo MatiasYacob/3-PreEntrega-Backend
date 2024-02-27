@@ -1,23 +1,14 @@
 
+import CartManager from "../services/dao/mongo/Cart.service.js";
 
-// Conexión al servidor de Socket.IO
 const socket = io();
 
-
-
-
-// Manejo del evento cuando el DOM está completamente cargado
 document.addEventListener("DOMContentLoaded", () => {
-  // Captura del formulario y escucha del evento de envío
   const form = document.querySelector('form');
   if (form) {
     form.addEventListener("submit", (e) => {
       e.preventDefault();
-
-      // Obtención de datos del formulario
       const formData = new FormData(form);
-
-      // Creación de un objeto con los datos del producto
       const post = {
         title: formData.get("title"),
         description: formData.get("description"),
@@ -27,53 +18,43 @@ document.addEventListener("DOMContentLoaded", () => {
         stock: formData.get("stock"),
       }
 
-      // Emitir el evento al servidor con los datos del producto a enviar
       socket.emit("post_send", post);
     });
   }
 });
 
-// Manejo de la recepción de datos de productos desde el servidor y actualización de la interfaz
 socket.on("productos", (data) => {
   const products = document.querySelector("#products");
   products.innerHTML = "";
 
-  // Iterando sobre los productos recibidos para mostrarlos en la interfaz
-  data.forEach((producto) => {
-      const productElement = document.createElement("div");
-      productElement.classList.add("card", "m-2", "col-md-4", "bg-light", "border", "border-primary");
-      productElement.innerHTML = `
-          <div class="card-body">
-              <h5 class="card-title">${producto.title}</h5>
-              <p class="card-text">Descripción: ${producto.description}</p>
-              <p class="card-text">Precio: $${producto.price}</p>
-              <p class="card-text">Código: ${producto.code}</p>
-              <p class="card-text">Stock: ${producto.stock}</p>
-              <p class="card-text">Fotos: ${producto.thumbnails}</p>
-              <p class="card-text">Status: ${producto.status}</p>
-              <p class="card-text">ID: ${producto._id}</p>
-              <button class="btn btn-danger" onclick="deleteProduct('${producto._id}')">Eliminar</button>
-          </div>
-      `;
-      products.appendChild(productElement);
-  });
-
-
- 
-});
-
-
-
-
-// Iterando sobre los productos recibidos para mostrarlos en la interfaz del carrito
-
-socket.on("cart_productos", (data) => {
-
-  const products = document.querySelector("#products_carrito");
-  products.innerHTML = "";
   data.forEach((producto) => {
     const productElement = document.createElement("div");
-    productElement.classList.add("card", "m-2", "col-md-4", "bg-light", "border", "border-primary"); // Clases de Bootstrap para el estilo
+    productElement.classList.add("card", "m-2", "col-md-4", "bg-light", "border", "border-primary");
+    productElement.innerHTML = `
+        <div class="card-body">
+            <h5 class="card-title">${producto.title}</h5>
+            <p class="card-text">Descripción: ${producto.description}</p>
+            <p class="card-text">Precio: $${producto.price}</p>
+            <p class="card-text">Código: ${producto.code}</p>
+            <p class="card-text">Stock: ${producto.stock}</p>
+            <p class="card-text">Fotos: ${producto.thumbnails}</p>
+            <p class="card-text">Status: ${producto.status}</p>
+            <p class="card-text">ID: ${producto._id}</p>
+            <button class="btn btn-danger" onclick="deleteAndReload('${producto._id}')">Eliminar</button>
+            <button class="btn btn-success" onclick="AddProductToCart('${producto._id}')">Agregar al carrito</button>
+        </div>
+    `;
+    products.appendChild(productElement);
+  });
+});
+
+socket.on("cart_productos", (data) => {
+  const products = document.querySelector("#products_carrito");
+  products.innerHTML = "";
+
+  data.forEach((producto) => {
+    const productElement = document.createElement("div");
+    productElement.classList.add("card", "m-2", "col-md-4", "bg-light", "border", "border-primary");
     productElement.innerHTML = `
       <div class="card-body">
         <p class="card-text">Cantidad: ${producto.quantity}</p>
@@ -83,66 +64,51 @@ socket.on("cart_productos", (data) => {
     `;
     products.appendChild(productElement);
   });
+});
 
-
-})
-
-
-
-// Función para eliminar un producto y recargar la página después de la eliminación
 function deleteAndReload(productId) {
-  deleteProduct(productId); // Función para eliminar el producto, puede ser tu función deleteProduct existente
-
-  // Después de eliminar el producto, recargar la página
+  deleteProduct(productId);
   reloadPage();
 }
 
-// Función para recargar la página
 function reloadPage() {
   location.reload();
 }
 
-
-
-
-
-// Función para eliminar un producto
 function deleteProduct(_id) {
   socket.emit("delete_product", _id);
 }
 
-
-
-
-
-// Función para agregar un producto al carrito
 function AddProductToCart(_id) {
-  socket.emit("AddProduct_toCart", _id)
-  Swal.fire({
-    position: 'top-end',
-    icon: 'success',
-    title: '¡Producto Agregado!',
-    showConfirmButton: false,
-    timer: 1500,
-    toast: true,
-  });
+  // Cambiamos este llamado para que utilice el servicio del carrito a través de Socket.IO
+  socket.emit("AddProduct_toCart", _id);
+  console.log('ID del producto enviado:', _id)  
+    .then(() => {
+      Swal.fire({
+        position: 'top-end',
+        icon: 'success',
+        title: '¡Producto Agregado!',
+        showConfirmButton: false,
+        timer: 1500,
+        toast: true,
+      });
+    })
+    .catch(error => console.error('Error:', error));
 }
 
-//Funcion para borrar productos del carrito
 function removeProductFromCart(_id) {
-  socket.emit("Borrar_delCarrito", _id)
-  reloadPage()
-
-
+  // Cambiamos este llamado para que utilice el servicio del carrito a través de Socket.IO
+  socket.emit("Borrar_delCarrito", _id);
+  reloadPage();
+  // Llamamos a la función correspondiente en el servicio del carrito
+  cartService.removeProductFromCart(_id)
+    .then(() => {
+      reloadPage();
+    })
+    .catch(error => console.error('Error:', error));
 }
 
-
-
-
-// Manejo de errores en la conexión con el servidor
-socket.on("connect_error", (error) => {
-  console.error("Error de conexión con el servidor:", error);
-});
+// Resto del código para el chat...
 
 
 // Lógica del Chat

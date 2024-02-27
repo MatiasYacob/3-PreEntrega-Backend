@@ -19,7 +19,7 @@ import viewsRouter from './routes/views.routes.js';
 import sessionRouter from './routes/sessions.router.js';
 import githubLoginViewRouter from './routes/githubLoginviewRouter.routes.js';
 import jwtRouter from './routes/jwt.router.js';
-import { __dirname } from './dirname.js';
+import { __dirname, authorization, passportCall } from './dirname.js';
 
 //Custom router
 
@@ -70,6 +70,19 @@ app.use(passport.initialize());
 app.use(passport.session());
 app.use(cookieParser("CoderS3cr3tC0d3"));
 
+// Ruta protegida que requiere autenticación
+app.get('/userid', passportCall('jwt'), authorization('usuario'), (req, res) => {
+  // Aquí puedes acceder al _id del usuario
+  const userId = req.user._id;
+
+  // Envía el _id como respuesta en un objeto JSON
+  res.json({ userId });
+});
+
+
+
+
+
 // Instancias de los managers
 const cManager = new CartManager();
 const pManager = new ProductManager();
@@ -111,6 +124,9 @@ app.use('/github', githubLoginViewRouter);
 app.use('/api/jwt', jwtRouter);
 
 
+
+
+
 //Custom router
 
 const usersExtendRouter = new UsersExtendRouter();
@@ -139,11 +155,13 @@ io.on('connection', async (socket) => {
     socket.emit('productos', await pManager.getProducts()); 
     socket.emit('cart_productos', await cManager.getProductsInCart());
 
-    // Manejo de eventos de agregar producto al carrito y eliminar producto del carrito
-    socket.on('AddProduct_toCart', async (_id) => {
+    socket.on('AddProduct_toCart', async ({ userId, _id }) => {
       try {
-        console.log("id del producto" + _id);
-        const addProduct = await cManager.AddProductToCart(_id);
+        console.log("id del producto " + _id + " para el usuario " + userId);
+    
+        // Aquí deberías llamar a tu función cManager.addProductToCart con userId y _id
+        const addProduct = await cManager.addProductToCart(userId, _id);
+    
         if (addProduct) {
           console.log('Producto agregado al carrito:', addProduct);
         } else {
@@ -153,6 +171,7 @@ io.on('connection', async (socket) => {
         console.error('Error al agregar el producto:', error);
       }
     });
+    
 
     socket.on('Borrar_delCarrito', async (_id) => {
       try {
