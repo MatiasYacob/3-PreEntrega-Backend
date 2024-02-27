@@ -2,6 +2,21 @@ import CartManager from "../services/dao/mongo/Cart.service.js";
 
 const manager = new CartManager();
 
+
+export const getProductsInCartController = async  (req, res) => {
+    try {
+      const userId = req.user._id;
+      const productsInCart = await manager.getProductsInCart(userId);
+  
+      // Renderizar la vista 'cart' y pasar los productos como datos
+      res.render('cart', { layout: false, productsInCart }); // layout: false para evitar el uso del diseño predeterminado
+    } catch (error) {
+      console.error('Error al obtener productos del carrito:', error);
+      res.status(500).json({ error: error.message || 'Error interno del servidor' });
+    }
+  }
+
+
 export const createCart = async (req, res) => {
     try {
         const userId = req.user._id;  // Ajusta según cómo obtienes el ID del usuario

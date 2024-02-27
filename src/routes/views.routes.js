@@ -4,6 +4,7 @@ import { Router } from "express";
 import { Product } from "../services/dao/mongo/models/product.model.js";
 import { Cart } from "../services/dao/mongo/models/cart.model.js";
 import { passportCall, authorization } from "../dirname.js";
+import * as CartController from "../controllers/CartController.js"
 
 const router = Router();
 
@@ -20,27 +21,10 @@ router.get("/chat", (req, res) => {
     res.render("chat.hbs");
 });
 
-// Rutas protegidas con autenticación y autorización
-router.get("/cart", passportCall('jwt'), authorization('USUARIO'), async (req, res) => {
-    const { page, limit } = req.query;
 
-    try {
-        const cartResult = await Cart.paginate({}, {
-            page: page || 1,
-            limit: limit || 10,
-        });
+router.get('/cart', passportCall('jwt'), authorization('usuario'), CartController.getProductsInCartController);
 
-        const cart_productos = cartResult.docs;
 
-        console.log("Productos del carrito:", cart_productos);
-        res.render("cart", {
-            cart_productos
-        });
-    } catch (error) {
-        console.error("Error al obtener productos del carrito:", error);
-        res.status(500).send("Error al obtener productos del carrito");
-    }
-});
 
 router.get('/session', (req, res) => {
     if (req.session.counter) {

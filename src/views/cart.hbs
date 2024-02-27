@@ -1,27 +1,75 @@
-<h2 class="display-4">Productos</h2>
+<!-- views/cart.handlebars -->
 
-<div class="container">
-    <nav aria-label="Page navigation example">
-        <ul class="pagination">
-            <p> <a href="/realtimeproducts" class="btn btn-primary ml-3">Ir a Carga de productos</a></p>
-            <p> <a href="/chat" class="btn btn-primary ml-3 ">Ir al Chat</a></p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carrito de Compras</title>
 
-            <p> <a href="/products" class="btn btn-primary ml-3">Ir a Products</a></p>
+  <!-- Agrega los enlaces CDN a Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <style>
+    body {
+      padding: 20px;
+    }
 
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
 
+    li {
+      list-style: none;
+      margin-bottom: 20px;
+    }
 
-        </ul>
+    .delete-btn {
+      cursor: pointer;
+    }
 
+    .checkout-btn {
+      margin-top: 20px;
+    }
 
+    /* Puedes agregar más estilos según tus preferencias */
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Productos en el carrito</h1>
+    <ul class="list-unstyled">
+      {{#each productsInCart}}
+        <li class="border p-3 d-flex justify-content-between align-items-center">
+          <div>
+            <strong>{{this.title}}</strong><br>
+            Nombre: {{this.name}}<br>
+            Precio: ${{this.price}}<br>
+            Cantidad: {{this.quantity}}
+          </div>
+          <button class="btn btn-danger delete-btn" onclick="deleteProduct('{{this.productId}}')">Eliminar</button>
+        </li>
+      {{/each}}
+    </ul>
 
-    </nav>
-    <div id="products_carrito" class="row row-cols-1 row-cols-md-4 g-4"></div>
-</div>
+    <button class="btn btn-primary btn-lg checkout-btn" onclick="checkout()">Realizar Compra</button>
+  </div>
 
+  <!-- Agrega los scripts de Bootstrap y funciones personalizadas al final del body -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Función para eliminar un producto del carrito
+    function deleteProduct(productId) {
+      // Implementa la lógica para eliminar el producto del carrito
+      console.log('Eliminar producto con ID:', productId);
+    }
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="../public/main.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-
-</div>
+    // Función para realizar la compra
+    function checkout() {
+      // Implementa la lógica para realizar la compra
+      console.log('Realizar compra');
+    }
+  </script>
+</body>
+</html>

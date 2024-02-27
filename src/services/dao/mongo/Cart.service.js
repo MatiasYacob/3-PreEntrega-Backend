@@ -163,42 +163,53 @@ class CartManager {
 
     async addProductToCart(userId, _id) {
         try {
-            const productToAdd = await Pmanager.getProductBy_id(_id);
-            console.log(_id);
-            if (!productToAdd) {
-                return { success: false, message: `El producto ${_id} no existe` };
-            }
-
-            let cart = await Cart.findOne({ user: userId });
-
-            if (!cart) {
-                const newCart = new Cart({
-                    user: userId,
-                    products: [{ productId: _id, quantity: 1 }],
-                });
-
-                await newCart.save();
-                console.log('Nuevo carrito creado exitosamente con un producto.');
-                return newCart;
-            }
-
-            const existingProduct = cart.products.find(item => String(item.productId) === String(_id));
-
-            if (existingProduct) {
-                existingProduct.quantity += 1;
-            } else {
-                cart.products.push({ productId: _id, quantity: 1 });
-            }
-
-            await cart.save();
-            console.log(`Producto ${_id} agregado al carrito exitosamente.`);
-
-            return cart;
+          const productToAdd = await Pmanager.getProductBy_id(_id);
+      
+          if (!productToAdd) {
+            return { success: false, message: `El producto ${_id} no existe` };
+          }
+      
+          let cart = await Cart.findOne({ user: userId });
+      
+          if (!cart) {
+            const newCart = new Cart({
+              user: userId,
+              products: [{
+                productId: _id,
+                quantity: 1,
+                name: productToAdd.title,
+                price: productToAdd.price,
+              }],
+            });
+      
+            await newCart.save();
+            console.log('Nuevo carrito creado exitosamente con un producto.');
+            return newCart;
+          }
+      
+          const existingProduct = cart.products.find(item => String(item.productId) === String(_id));
+      
+          if (existingProduct) {
+            existingProduct.quantity += 1;
+          } else {
+            cart.products.push({
+              productId: _id,
+              quantity: 1,
+              name: productToAdd.title,
+              price: productToAdd.price,
+            });
+          }
+      
+          await cart.save();
+          console.log(`Producto ${_id} agregado al carrito exitosamente.`);
+      
+          return cart;
         } catch (error) {
-            console.error('Error al agregar producto al carrito:', error);
-            return { success: false, message: 'Error interno del servidor' };
+          console.error('Error al agregar producto al carrito:', error);
+          return { success: false, message: 'Error interno del servidor' };
         }
-    }
+      }
+      
 }
 
 export default CartManager;
