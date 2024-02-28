@@ -74,7 +74,7 @@ app.use(passport.session());
 app.use(cookieParser("CoderS3cr3tC0d3"));
 
 // Ruta protegida que requiere autenticación
-app.get('/userid', passportCall('jwt'), authorization('usuario'), (req, res) => {
+app.get('/userid', passportCall('jwt'), authorization(['ADMIN','USUARIO']), (req, res) => {
   // Aquí puedes acceder al _id del usuario
   const userId = req.user._id;
 

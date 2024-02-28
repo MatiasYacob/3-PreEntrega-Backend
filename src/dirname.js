@@ -71,13 +71,8 @@ export const authorization = (role) => {
         try {
             if (!req.user) return res.status(401).send("Unauthorized: User not found in JWT");
 
-            // Aquí puedes acceder al _id del usuario desde el jwt_payload
-            const userId = req.user._id;
 
-            const userRole = req.user.role.toUpperCase();
-            const requiredRole = role.toUpperCase();
-
-            if (userRole !== requiredRole) {
+            if (!role.includes(req.user.role.toUpperCase())) {
                 return res.status(403).send("Forbidden: El usuario no tiene permisos con este rol.");
             }
 

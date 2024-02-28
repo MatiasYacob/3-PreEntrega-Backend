@@ -25,6 +25,14 @@ router.get('/realtimeproducts', passportCall('jwt'), authorization('USUARIO'), a
         res.status(500).send('Error interno del servidor');
     }
 });
+router.get("/products", passportCall('jwt'), authorization(['ADMIN', 'USUARIO']), async (req, res) => {
+    try {
+        await ProductController.getProductsUser(req, res);
+    } catch (error) {
+        console.error('Error al obtener los productos:', error);
+        res.status(500).send('Error interno del servidor');
+    }
+});
 
 
 
@@ -48,19 +56,6 @@ router.get('/session', (req, res) => {
     }
 });
 
-router.get("/products", passportCall('jwt'), authorization('USUARIO'), async (req, res) => {
-    const { page, limit } = req.query;
-
-    const productos = await Product.paginate({}, {
-        page: page || 1,
-        limit: limit || 10,
-    });
-
-    res.render("productos", {
-        productos,
-        user: req.session.user
-    });
-});
 
 router.get('/logout', (req, res) => {
     req.session.destroy(error => {
