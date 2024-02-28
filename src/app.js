@@ -31,6 +31,9 @@ import { __dirname, authorization, passportCall } from './dirname.js';
 import ProductManager from './services/dao/mongo/Product.service.js';
 import MessageManager from './services/dao/mongo/Message.service.js';
 import CartManager from './services/dao/mongo/Cart.service.js';
+//controller
+import * as ProductController from "./controllers/ProductController.js"
+
 
 // App Initialization
 import { initializeApp } from './appInitialization.js';
@@ -152,8 +155,8 @@ io.on('connection', async (socket) => {
   try {
     // Emitir los productos al cliente cuando se conecta
     
-    socket.emit('productos', await pManager.getProducts()); 
-    socket.emit('cart_productos', await cManager.getProductsInCart());
+    socket.emit('productos', await ProductController.getProducts()); 
+    
 
     socket.on('AddProduct_toCart', async ({ userId, _id }) => {
       try {

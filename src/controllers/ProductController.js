@@ -1,14 +1,14 @@
 
-import ProductManager from '../services/dao/mongo/Product.service.js';
 
-const manager = new ProductManager();
+import {productRepository} from "../services/service.js"
+
 
 
 // Función para obtener todos los productos con filtros y paginación
 export async function getProducts(req, res) {
     try {
         const { limit = 10, page = 1, sort, query } = req.query;
-        let productsToSend = await manager.getProducts(); // Obtener todos los productos
+        let productsToSend = await productRepository.getAll();
 
         // Aplicar el filtro según el parámetro 'query' (nombre del producto)
         if (query) {
@@ -28,42 +28,49 @@ export async function getProducts(req, res) {
             });
         }
 
-        // Calcular el total de páginas
-        const totalPages = Math.ceil(productsToSend.length / limit);
+        // Calcular la información de paginación
+        const totalItems = productsToSend.length;
+        const totalPages = Math.ceil(totalItems / limit);
+        const currentPage = Math.min(page, totalPages);
 
-        // Calcular el índice de inicio y final para la paginación
-        const startIndex = (page - 1) * limit;
-        const endIndex = page * limit;
+        const startIndex = (currentPage - 1) * limit;
+        const endIndex = Math.min(startIndex + limit, totalItems);
 
         // Obtener los productos para la página específica después del filtrado y ordenamiento
         const paginatedProducts = productsToSend.slice(startIndex, endIndex);
 
-        // Crear el objeto de respuesta con información de paginación
+        // Construir el objeto de respuesta
         const responseObject = {
             status: 'success',
             payload: paginatedProducts,
             totalPages: totalPages,
-            prevPage: page > 1 ? page - 1 : null,
-            nextPage: page < totalPages ? page + 1 : null,
-            page: page,
-            hasPrevPage: page > 1,
-            hasNextPage: page < totalPages,
-            prevLink: page > 1 ? `/api/product?limit=${limit}&page=${page - 1}` : null,
-            nextLink: page < totalPages ? `/api/product?limit=${limit}&page=${page + 1}` : null,
+            prevPage: currentPage > 1 ? currentPage - 1 : null,
+            nextPage: currentPage < totalPages ? currentPage + 1 : null,
+            currentPage: currentPage,
+            hasPrevPage: currentPage > 1,
+            hasNextPage: currentPage < totalPages,
+            prevLink: currentPage > 1 ? `/realtimeproducts?limit=${limit}&page=${currentPage - 1}` : null,
+            nextLink: currentPage < totalPages ? `/realtimeproducts?limit=${limit}&page=${currentPage + 1}` : null,
         };
 
-        res.json(responseObject);
+        res.render("realtimeproducts.hbs", {responseObject});
     } catch (error) {
         console.error('Error al obtener los productos:', error);
         res.status(500).json({ status: 'error', error: 'Error al obtener los productos' });
     }
 }
 
+
+
+
+
+
+
 // Función para obtener un producto por _id
 export async function getProductById(req, res) {
     try {
         const product_id = req.params._id;
-        const product = await manager.getProductBy_id(product_id);
+        const product = await productRepository.getProductBy_id(product_id);
 
         if (product) {
             res.json(product);
@@ -93,7 +100,7 @@ export async function addProduct(req, res) {
         };
 
         // Usa el método addProduct del ProductManager para agregar el producto
-        const product = await manager.addProduct(newProduct);
+        const product = await productRepository.addProduct(newProduct);
 
         if (product) {
             res.status(201).json(product); // Producto agregado exitosamente
@@ -112,7 +119,7 @@ export async function updateProductById(req, res) {
     const updatedFields = req.body; // Los campos actualizados estarán en req.body
 
     try {
-        const updatedProduct = await manager.updateProduct(productId, updatedFields);
+        const updatedProduct = await productRepository.updateProduct(productId, updatedFields);
         if (!updatedProduct) {
             return res.status(404).json({ error: 'Producto no encontrado' });
         }

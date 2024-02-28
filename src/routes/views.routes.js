@@ -5,6 +5,8 @@ import { Product } from "../services/dao/mongo/models/product.model.js";
 import { Cart } from "../services/dao/mongo/models/cart.model.js";
 import { passportCall, authorization } from "../dirname.js";
 import * as CartController from "../controllers/CartController.js"
+import * as ProductController from "../controllers/ProductController.js"
+
 
 const router = Router();
 
@@ -13,9 +15,19 @@ router.get("/", (req, res) => {
     res.render("home.hbs");
 });
 
-router.get("/realtimeproducts",passportCall('jwt'), authorization('ADMINISTRADOR'), (req, res) => {
-    res.render("product.hbs");
+
+
+router.get('/realtimeproducts', passportCall('jwt'), authorization('USUARIO'), async (req, res) => {
+    try {
+        await ProductController.getProducts(req, res);
+    } catch (error) {
+        console.error('Error al obtener los productos:', error);
+        res.status(500).send('Error interno del servidor');
+    }
 });
+
+
+
 
 router.get("/chat", (req, res) => {
     res.render("chat.hbs");
