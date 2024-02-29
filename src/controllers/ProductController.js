@@ -171,7 +171,11 @@ export async function addProduct(req, res) {
     try {
         const { title, description, price, thumbnails, code, stock, status } = req.body;
 
-        // Crea un nuevo objeto con la data del body
+        // Validación de campos obligatorios
+        if (!title || !price || !thumbnails || !code || !stock) {
+            return res.status(400).json({ status: 'error', message: 'Faltan campos obligatorios' });
+        }
+
         const newProduct = {
             title,
             description,
@@ -179,22 +183,27 @@ export async function addProduct(req, res) {
             thumbnails: Array.isArray(thumbnails) ? thumbnails : [thumbnails],
             code,
             stock: Number(stock),
-            status: status || true // Si no se provee status, se establece como true por defecto
+            status: status || true
         };
 
-        // Usa el método addProduct del ProductManager para agregar el producto
         const product = await productRepository.save(newProduct);
 
         if (product) {
-            res.status(201).json(product); // Producto agregado exitosamente
+            // Log informativo
+            console.log('Producto agregado exitosamente:', product);
+            res.status(201).json({ status: 'success', data: product });
         } else {
-            res.status(500).json({ error: 'Error al agregar el producto' }); // Hubo un error al agregar el producto
+            // Log de error
+            console.error('Error al agregar el producto');
+            res.status(500).json({ status: 'error', message: 'Error al agregar el producto' });
         }
     } catch (error) {
-        console.error('Error al agregar el producto:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        // Log de error interno del servidor
+        console.error('Error interno del servidor al agregar el producto:', error);
+        res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
     }
 }
+
 
 // Función para actualizar un producto por su ID
 export async function updateProductById(req, res) {
