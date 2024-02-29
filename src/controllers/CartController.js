@@ -1,12 +1,16 @@
 import CartManager from "../services/dao/mongo/Cart.service.js";
 
 const manager = new CartManager();
+import {cartRepository} from "../services/service.js";
+import { productRepository } from "../services/service.js";
 
 
 export const getProductsInCartController = async  (req, res) => {
     try {
       const userId = req.user._id;
-      const productsInCart = await manager.getProductsInCart(userId);
+      console.log(req.user._id);
+      const productsInCart = await cartRepository.getAll(userId);
+
   
       // Renderizar la vista 'cart' y pasar los productos como datos
       res.render('cart', { layout: false, productsInCart }); // layout: false para evitar el uso del diseño predeterminado
@@ -15,6 +19,33 @@ export const getProductsInCartController = async  (req, res) => {
       res.status(500).json({ error: error.message || 'Error interno del servidor' });
     }
   }
+
+  //agregar Producto
+  export const AddProductToCart = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const productId = req.params.productId; 
+
+        // Obtener el producto por su ID
+        const productToAddCart = await productRepository.findById(productId);
+
+        if (!productToAddCart) {
+            return res.status(404).json({ status: 'error', error: 'El producto no existe' });
+        }
+
+        // Agregar el producto al carrito del usuario
+        const updatedCart = await cartRepository.addToCart(userId, productToAddCart._id);
+
+        return res.status(200).json({ status: 'success', message: 'Producto agregado al carrito exitosamente', cart: updatedCart });
+
+    } catch (error) {
+        console.error('Error al agregar el producto al carrito:', error);
+        res.status(500).json({ status: 'error', error: 'Error al agregar el producto al carrito' });
+    }
+}
+
+
+
 
 
 export const createCart = async (req, res) => {

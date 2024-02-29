@@ -42,8 +42,16 @@ router.get("/chat", (req, res) => {
 });
 
 // Ruta para visualizar productos en el carrito ("/cart")
-router.get('/cart', passportCall('jwt'), authorization(['ADMIN', 'USUARIO']), CartController.getProductsInCartController);
 
+router.get("/cart", passportCall('jwt'), authorization(['ADMIN', 'USUARIO']), async (req, res) => {
+    try {
+        await CartController.getProductsInCartController(req, res);
+        
+    } catch (error) {
+        console.error('Error al obtener los productos:', error);
+        res.status(500).send('Error interno del servidor');
+    }
+});
 // Ruta para manejar sesiones ("/session")
 router.get('/session', (req, res) => {
     if (req.session.counter) {

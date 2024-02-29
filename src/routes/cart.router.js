@@ -8,7 +8,7 @@ const router = Router();
 
 
 
-router.post('/', CartController.createCart);
+router.post('/:productId', passportCall('jwt'), authorization(['USUARIO']), CartController.AddProductToCart);
 
 router.delete('/', CartController.removeAllProductsFromCart);
 

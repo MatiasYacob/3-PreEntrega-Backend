@@ -64,7 +64,9 @@ class ProductManager {
     // Obtiene un producto por su ID específico.
     async getProductBy_id(_id) {
         try {
+            
             const product = await Product.findById(_id);
+            
             return product || null;
         } catch (error) {
             console.error('Error al obtener el producto por ID:', error);
