@@ -14,8 +14,10 @@ class CartRepository {
       return this.cartManager.addProductToCart(userId, _id);
     }
   
-    removeFromCart = (productId) => {
-      return this.cartManager.removeFromCart(productId);
+    removeFromCart = (userID, _id) => {
+     
+
+      return this.cartManager.removeFromCart(userID, _id);
     }
   
     updateCartItem = (productId, updatedQuantity) => {

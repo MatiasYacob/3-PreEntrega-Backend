@@ -51,7 +51,7 @@ class CartManager {
       
           const existingProduct = cart.products.find(item => {
             const itemProductId = String(item.productId);
-            const inputId = String(_id._id);
+            const inputId = String(_id);
         
             console.log('itemProductId:', itemProductId);
             console.log('inputId:', inputId);
@@ -73,7 +73,7 @@ class CartManager {
           }
       
           await cart.save();
-          console.log(`Producto ${_id} agregado al carrito exitosamente.`);
+          console.log(`Producto ${productToAdd.title} agregado al carrito exitosamente.`);
       
           return cart;
         } catch (error) {
@@ -82,24 +82,25 @@ class CartManager {
         }
       }
       
-    async removeProductFromCart(userId, _id) {
+      async removeFromCart(userId, _id) {
         try {
             const cart = await Cart.findOne({ user: userId });
-
+    
+           
+    
             if (!cart) {
                 return { success: false, message: 'No se encontró un carrito para el usuario' };
             }
-
-            const productIndex = cart.products.findIndex(product => String(product._id) === String(_id));
-                
-
+    
+            const productIndex = cart.products.findIndex(product => String(product.productId) === String(_id));
+    
             if (productIndex === -1) {
                 return { success: false, message: 'El producto no está en el carrito' };
             }
-
+    
             cart.products.splice(productIndex, 1);
             await cart.save();
-
+    
             console.log(`Producto ${_id} eliminado del carrito exitosamente.`);
             return { success: true, message: `Producto ${_id} eliminado del carrito` };
         } catch (error) {
@@ -107,6 +108,7 @@ class CartManager {
             return { success: false, message: 'Error interno del servidor' };
         }
     }
+    
 
     async removeAllProductsFromCart(userId) {
         try {

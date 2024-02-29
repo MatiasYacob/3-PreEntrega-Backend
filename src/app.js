@@ -111,7 +111,7 @@ const mongoInstance = async () => {
   }
 }
 mongoInstance()
-mongoInstance()
+
 
 
 // Inicialización de la aplicación y configuraciones

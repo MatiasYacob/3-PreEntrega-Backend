@@ -42,11 +42,26 @@ export const getProductsInCartController = async  (req, res) => {
         console.error('Error al agregar el producto al carrito:', error);
         res.status(500).json({ status: 'error', error: 'Error al agregar el producto al carrito' });
     }
-}
+};
 
+export const removeProductFromCart = async (req, res) => {
+    try {
+        const productId = req.params.productId;
+        const userId = req.user._id;
+        
+        const result = await cartRepository.removeFromCart(userId, productId);
 
+        if (!result.success) {
+            return res.status(404).json({ success: false, message: result.message });
+            
+        }
 
-
+        res.json({ success: true, message: `Producto ${productId} eliminado del carrito` });
+    } catch (error) {
+        console.error('Error al eliminar producto del carrito:', error);
+        res.status(500).json({ success: false, message: 'Error interno del servidor' });
+    }
+};
 
 export const createCart = async (req, res) => {
     try {
@@ -81,22 +96,6 @@ export const removeAllProductsFromCart = async (req, res) => {
         res.json({ success: true, message: 'Todos los productos eliminados del carrito' });
     } catch (error) {
         console.error('Error al eliminar todos los productos del carrito:', error);
-        res.status(500).json({ success: false, message: 'Error interno del servidor' });
-    }
-};
-
-export const removeProductFromCart = async (req, res) => {
-    try {
-        const productId = req.params._id;
-        const result = await manager.removeProductFromCart(productId);
-
-        if (!result.success) {
-            return res.status(404).json({ success: false, message: result.message });
-        }
-
-        res.json({ success: true, message: `Producto ${productId} eliminado del carrito` });
-    } catch (error) {
-        console.error('Error al eliminar producto del carrito:', error);
         res.status(500).json({ success: false, message: 'Error interno del servidor' });
     }
 };

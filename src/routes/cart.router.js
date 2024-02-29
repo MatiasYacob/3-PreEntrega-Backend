@@ -10,9 +10,9 @@ const router = Router();
 
 router.post('/:productId', passportCall('jwt'), authorization(['USUARIO']), CartController.AddProductToCart);
 
-router.delete('/', CartController.removeAllProductsFromCart);
+router.delete('/:productId', passportCall('jwt'), authorization(['USUARIO']), CartController.removeProductFromCart);
 
-router.delete('/:_id', CartController.removeProductFromCart);
+router.delete('/', passportCall('jwt'), authorization(['USUARIO']), CartController.removeAllProductsFromCart);
 
 router.put('/:_id', CartController.updateProductQuantity);
 
