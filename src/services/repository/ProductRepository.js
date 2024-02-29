@@ -1,5 +1,3 @@
-
-
 class ProductRepository {
   constructor(productManager) {
     this.productManager = productManager;
@@ -17,11 +15,13 @@ class ProductRepository {
     return this.productManager.updateProduct(id, updatedProduct);
   }
 
+  delete = (id) => {
+    return this.productManager.deleteProduct(id);
+  }
+
   findById = (id) => {
     return this.productManager.getProductBy_id(id);
   }
-
-  
 }
 
 export default ProductRepository;

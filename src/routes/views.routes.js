@@ -1,22 +1,22 @@
-// router.js
-
+// Importación de módulos y dependencias necesarios
 import { Router } from "express";
 import { Product } from "../services/dao/mongo/models/product.model.js";
 import { Cart } from "../services/dao/mongo/models/cart.model.js";
 import { passportCall, authorization } from "../dirname.js";
-import * as CartController from "../controllers/CartController.js"
-import * as ProductController from "../controllers/ProductController.js"
+import * as CartController from "../controllers/CartController.js";
+import * as ProductController from "../controllers/ProductController.js";
 
-
+// Creación de una instancia de Router
 const router = Router();
 
 // Rutas públicas
+
+// Ruta raíz ("/")
 router.get("/", (req, res) => {
     res.render("home.hbs");
 });
 
-
-
+// Ruta para visualizar productos en tiempo real ("/realtimeproducts")
 router.get('/realtimeproducts', passportCall('jwt'), authorization('USUARIO'), async (req, res) => {
     try {
         await ProductController.getProducts(req, res);
@@ -25,6 +25,8 @@ router.get('/realtimeproducts', passportCall('jwt'), authorization('USUARIO'), a
         res.status(500).send('Error interno del servidor');
     }
 });
+
+// Ruta para visualizar productos para uso del usuario
 router.get("/products", passportCall('jwt'), authorization(['ADMIN', 'USUARIO']), async (req, res) => {
     try {
         await ProductController.getProductsUser(req, res);
@@ -34,18 +36,15 @@ router.get("/products", passportCall('jwt'), authorization(['ADMIN', 'USUARIO'])
     }
 });
 
-
-
-
+// Ruta para acceder al chat ("/chat")
 router.get("/chat", (req, res) => {
     res.render("chat.hbs");
 });
 
+// Ruta para visualizar productos en el carrito ("/cart")
+router.get('/cart', passportCall('jwt'), authorization(['ADMIN', 'USUARIO']), CartController.getProductsInCartController);
 
-router.get('/cart', passportCall('jwt'), authorization('usuario'), CartController.getProductsInCartController);
-
-
-
+// Ruta para manejar sesiones ("/session")
 router.get('/session', (req, res) => {
     if (req.session.counter) {
         req.session.counter++;
@@ -56,7 +55,7 @@ router.get('/session', (req, res) => {
     }
 });
 
-
+// Ruta para cerrar sesión ("/logout")
 router.get('/logout', (req, res) => {
     req.session.destroy(error => {
         if (error) {
@@ -66,4 +65,5 @@ router.get('/logout', (req, res) => {
     });
 });
 
+// Exportación del router para su uso en otros archivos
 export default router;

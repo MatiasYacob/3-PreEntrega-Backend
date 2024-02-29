@@ -1,6 +1,7 @@
 
 
 import { productRepository } from "../services/service.js"
+import mongoose from "mongoose";
 
 
 
@@ -117,7 +118,34 @@ export async function getProductsUser(req, res) {
 }
 
 
+// Función para eliminar un producto por su ID
+export async function deleteProduct(req, res) {
+    try {
+        const productId = req.params.productId;
 
+        // Validar que productId es un ObjectId válido antes de intentar eliminar
+        if (!mongoose.isValidObjectId(productId)) {
+            return res.status(400).json({ status: 'error', error: 'ID de producto no válido' });
+        }
+
+        const deletedProduct = await productRepository.delete(productId);
+
+        if (!deletedProduct) {
+            return res.status(404).json({ status: 'error', error: 'El producto no existe' });
+        }
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'Producto eliminado exitosamente',
+            logMessage: 'Producto eliminado exitosamente. Mensaje adicional para el log de la consola.',
+        });
+        
+
+    } catch (error) {
+        console.error('Error al eliminar el producto:', error);
+        res.status(500).json({ status: 'error', error: 'Error al eliminar el producto' });
+    }
+}
 
 
 

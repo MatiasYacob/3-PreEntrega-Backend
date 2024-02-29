@@ -65,24 +65,30 @@ export const passportCall = (strategy) => {
     };
 };
 
-// Middleware de autorización
 export const authorization = (role) => {
     return async (req, res, next) => {
         try {
-            if (!req.user) return res.status(401).send("Unauthorized: User not found in JWT");
-
+            if (!req.user) {
+                // Si el usuario no está autenticado, puedes redirigirlo o renderizar la vista de error
+                // Puedes ajustar esto según tus necesidades
+                return res.status(401).render('error.hbs', { error: 'Unauthorized: User not found in JWT' });
+            }
 
             if (!role.includes(req.user.role.toUpperCase())) {
-                return res.status(403).send("Forbidden: El usuario no tiene permisos con este rol.");
+                // Si el usuario no tiene los permisos necesarios, renderiza la vista de error
+                // Puedes ajustar esto según tus necesidades
+                return res.status(403).render('error.hbs', { error: 'Forbidden: El usuario no tiene permisos con este rol.' });
             }
 
             next();
         } catch (error) {
             console.error("Error en authorization:", error);
-            next(error);
+            // En caso de error, también puedes renderizar la vista de error
+            return res.status(500).render('error.hbs', { error: 'Internal Server Error' });
         }
     };
 };
+
 
 
 
