@@ -5,6 +5,9 @@ import { Cart } from "../services/dao/mongo/models/cart.model.js";
 import { passportCall, authorization } from "../dirname.js";
 import * as CartController from "../controllers/CartController.js";
 import * as ProductController from "../controllers/ProductController.js";
+import TicketService from "../services/dao/mongo/ticket.service.js";
+
+const ticketService = new TicketService();
 
 // Creación de una instancia de Router
 const router = Router();
@@ -25,6 +28,23 @@ router.get('/realtimeproducts', passportCall('jwt'), authorization('USUARIO'), a
         res.status(500).send('Error interno del servidor');
     }
 });
+router.get('/tickets', passportCall('jwt'), authorization('USUARIO'), async (req, res) => {
+    const userId = req.user._id;
+
+    try {
+        const tickets = await ticketService.getTicketsByUser(userId);
+        console.log(userId);
+
+        // Renderiza la vista y pasa los datos de los tickets como un objeto
+        res.render("tickets.hbs", { tickets });
+    } catch (error) {
+        console.error('Error al obtener los tickets:', error);
+        res.status(500).send('Error interno del servidor');
+    }
+});
+
+
+
 
 // Ruta para visualizar productos para uso del usuario
 router.get("/products", passportCall('jwt'), authorization(['ADMIN', 'USUARIO']), async (req, res) => {
