@@ -1,5 +1,6 @@
 import passport from 'passport';
 import { generateJWToken } from '../dirname.js';
+import {userRepository} from "../services/service.js";
 
 const SessionsController = {};
 
@@ -12,9 +13,24 @@ SessionsController.githubCallback = passport.authenticate('github', {
 });
 
 // Passport local - Registro
-SessionsController.register = passport.authenticate('register', {
-    failureRedirect: "/fail-register",
-});
+SessionsController.register = async (req, res) => {
+    try {
+        const result = await userRepository.Register(req.body);
+
+        if (result.success) {
+            // Si el registro es exitoso, puedes generar un token JWT aquí si es necesario
+            const access_token = generateJWToken(result.user);
+            console.log(access_token);
+
+            res.status(201).json({ success: true, message: "Registro exitoso", user: result.user, access_token });
+        } else {
+            res.status(400).json({ success: false, message: result.message });
+        }
+    } catch (error) {
+        console.error("Error en el servidor:", error);
+        res.status(500).json({ success: false, message: "Error en el servidor", error });
+    }
+};
 
 // Passport local - Inicio de sesión
 SessionsController.login = passport.authenticate('login', {

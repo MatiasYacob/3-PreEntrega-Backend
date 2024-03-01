@@ -7,7 +7,7 @@ import handlebars from "handlebars";
 import { PRIVATE_KEY } from "../dirname.js";
 import jwtStrategy from 'passport-jwt';
 import UserDTO from "../services/dto/users.dto.js";
-
+const localStrategy = passportLocal.Strategy;
 
 const JwtStrategy = jwtStrategy.Strategy;
 const ExtractJWT = jwtStrategy.ExtractJwt;
@@ -44,6 +44,52 @@ const initializePassport = () => {
         }
     });
 };
+
+passport.use('register', new localStrategy(
+    {
+        passReqToCallback: true,
+        usernameField: 'email'
+    },
+    async (req, username, password, done) => {
+
+        const { first_name, last_name, email, age } = req.body;
+
+        try {
+            const exist = await userModel.findOne({ email });
+            if (exist) {
+                console.log("El usuario ya existe");
+                return done(null, false);
+            }
+
+            const user = {
+                first_name,
+                last_name,
+                email,
+                age,
+                //se encripta después
+                password: createHash(password)
+            };
+
+            const result = await userModel.create(user);
+
+            //todo ok
+            console.log(result);
+            return done(null, result);
+        } catch (error) {
+            return done("Error registrando usuario: " + error);
+        }
+    }
+));
+
+
+
+
+
+
+
+
+
+
 
 const cookieExtractor = req => {
     let token = null;

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import SessionsController from "../controllers/SessionsController.js";
 
+
 const router = Router();
 
 // Passport GitHub

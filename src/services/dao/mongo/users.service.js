@@ -1,26 +1,50 @@
 import userModel from "./models/user.model.js";
-
-export default class UserService {
+import {createHash} from "../../../dirname.js";
+ class UserService {
     constructor(){
         console.log("Calling users model using a service.");
     };  
-    getAll = async () => {
-        let users = await userModel.find();
-        return users.map(user=>user.toObject());
+   
+    Register = async (user) => {
+        try {
+            const exist = await userModel.findOne({ email: user.email });
+            console.log("Calling users model using a service.");
+
+            if (exist) {
+                console.log("El usuario ya existe");
+                return { success: false, message: "El usuario ya existe" };
+            }
+
+            const newUser = {
+                first_name: user.first_name,
+                last_name: user.last_name,
+                email: user.email,
+                age: user.age,
+                password: createHash(user.password),
+            };
+
+            const result = await userModel.create(newUser);
+
+            console.log(result);
+            return { success: true, message: "Registro exitoso", user: result };
+        } catch (error) {
+            console.error("Error registrando usuario:", error);
+            return { success: false, message: "Error registrando usuario" };
+        }
     };
-    save = async (user) => {
-        let result = await userModel.create(user);
-        return result;
-    };
+
+
+
+
+
+
+
+    
     findByUsername = async (username) => {
         const result = await userModel.findOne({email: username});
         return result;
     };
-    update = async (filter, value) => {
-        console.log("Update user with filter and value:");
-        console.log(filter);
-        console.log(value);
-        let result = await userModel.updateOne(filter, value);
-        return result;
-    }
+  
 };
+
+export default UserService;
