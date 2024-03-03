@@ -20,6 +20,7 @@ import sessionRouter from './routes/sessions.router.js';
 import githubLoginViewRouter from './routes/githubLoginviewRouter.routes.js';
 import jwtRouter from './routes/jwt.router.js';
 import { __dirname, authorization, passportCall } from './dirname.js';
+import EmailRouter from './routes/mail.router.js';
 
 //Custom router
 
@@ -118,6 +119,7 @@ mongoInstance()
 initializeApp(app, __dirname);
 
 // Definición de rutas para la API y las vistas
+app.use('/api/email',EmailRouter);
 app.use('/api/product', productRouter);
 app.use('/api/carts', cartRouter);
 app.use('/', viewsRouter);

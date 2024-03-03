@@ -18,3 +18,10 @@ import UserRepository from './repository/UsersRepository.js';
 
 const UserManager = new UserService();
 export const userRepository = new UserRepository(UserManager);
+
+//Repository de tickets
+
+import TicketManager from './dao/mongo/ticket.service.js';
+import TicketRepository from './repository/TicketRepository.js';
+const ticketManager = new TicketManager()
+export const ticketRepository = new TicketRepository(ticketManager)

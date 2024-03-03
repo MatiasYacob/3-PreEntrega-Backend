@@ -26,4 +26,6 @@ dotenv.config({
 export default {
     port: process.env.PORT,
     mongoUrl: process.env.MONGO_URL,
+    gmailAcount: process.env.GMAIL_ACCOUNT,
+    gmailAppPassword: process.env.GMAIL_APP_PASSWD,
 };

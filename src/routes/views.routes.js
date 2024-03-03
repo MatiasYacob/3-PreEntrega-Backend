@@ -5,9 +5,8 @@ import { Cart } from "../services/dao/mongo/models/cart.model.js";
 import { passportCall, authorization } from "../dirname.js";
 import * as CartController from "../controllers/CartController.js";
 import * as ProductController from "../controllers/ProductController.js";
-import TicketService from "../services/dao/mongo/ticket.service.js";
+import { ticketRepository } from "../services/service.js";
 
-const ticketService = new TicketService();
 
 // Creación de una instancia de Router
 const router = Router();
@@ -32,7 +31,7 @@ router.get('/tickets', passportCall('jwt'), authorization('USUARIO'), async (req
     const userId = req.user._id;
 
     try {
-        const tickets = await ticketService.getTicketsByUser(userId);
+        const tickets = await ticketRepository.getAll(userId);
         console.log(userId);
 
         // Renderiza la vista y pasa los datos de los tickets como un objeto

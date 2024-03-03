@@ -3,14 +3,14 @@
 import { Router } from 'express';
 import * as CartController from '../controllers/CartController.js';
 import { passportCall, authorization } from "../dirname.js";
-import TicketService from '../services/dao/mongo/ticket.service.js';
-const ticketService = new TicketService();
+
+import { ticketRepository } from '../services/service.js';
 const router = Router();
 
 router.post('/tickets/create', async (req, res) => {
     const userId = req.body.userId;  // Ajusta según cómo estás manejando el ID del usuario
     try {
-        const ticket = await ticketService.createTicket (userId);
+        const ticket = await ticketRepository.create(userId);
         res.status(201).json(ticket);
     } catch (error) {
         console.error('Error al crear el ticket:', error);
