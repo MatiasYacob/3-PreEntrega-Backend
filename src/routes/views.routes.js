@@ -19,7 +19,7 @@ router.get("/", (req, res) => {
 });
 
 // Ruta para visualizar productos en tiempo real ("/realtimeproducts")
-router.get('/realtimeproducts', passportCall('jwt'), authorization('USUARIO'), async (req, res) => {
+router.get('/realtimeproducts', passportCall('jwt'), authorization(['ADMIN']), async (req, res) => {
     try {
         await ProductController.getProducts(req, res);
     } catch (error) {
@@ -27,7 +27,7 @@ router.get('/realtimeproducts', passportCall('jwt'), authorization('USUARIO'), a
         res.status(500).send('Error interno del servidor');
     }
 });
-router.get('/tickets', passportCall('jwt'), authorization('USUARIO'), async (req, res) => {
+router.get('/tickets', passportCall('jwt'), authorization(['ADMIN', 'USUARIO']), async (req, res) => {
     const userId = req.user._id;
 
     try {

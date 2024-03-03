@@ -5,11 +5,11 @@ const router = Router();
 
 // Rutas
 // Ruta para eliminar un producto del carrito ("/cart/:productId")
-router.delete('/:productId', passportCall('jwt'), authorization(['ADMIN','USUARIO']), productController.deleteProduct);
+router.delete('/:productId', passportCall('jwt'), authorization(['ADMIN']), productController.deleteProduct);
 
 
 // Ruta para agregar un nuevo producto
-router.post('/', passportCall('jwt'), authorization(['ADMIN','USUARIO']), productController.addProduct);
+router.post('/', passportCall('jwt'), authorization(['ADMIN']), productController.addProduct);
 
 
 

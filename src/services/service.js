@@ -9,8 +9,8 @@ export const productRepository = new ProductRepository(productManager);
 import CartManager from './dao/mongo/Cart.service.js';
 import CartRepository from './repository/CartRepository.js';
 
-const cartManager = new CartManager();  // Corregido: Cambiado el nombre de la constante
-export const cartRepository = new CartRepository(cartManager);  // Corregido: Cambiado el nombre de la constante
+const cartManager = new CartManager();  
+export const cartRepository = new CartRepository(cartManager);  
 
 //Repository de Users
 import UserService from './dao/mongo/users.service.js';
