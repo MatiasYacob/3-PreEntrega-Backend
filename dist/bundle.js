@@ -17,7 +17,8 @@ var url = require('url');
 var path = require('path');
 var bcrypt = require('bcrypt');
 var jwt = require('jsonwebtoken');
-require('passport-local');
+var nodemailer = require('nodemailer');
+var passportLocal = require('passport-local');
 require('passport-github2');
 var jwtStrategy = require('passport-jwt');
 
@@ -67,6 +68,8 @@ dotenv__namespace.config({
 var config = {
     port: process.env.PORT,
     mongoUrl: process.env.MONGO_URL,
+    gmailAcount: process.env.GMAIL_ACCOUNT,
+    gmailAppPassword: process.env.GMAIL_APP_PASSWD,
 };
 
 const productSchema = new mongoose.Schema({
@@ -490,13 +493,320 @@ class CartRepository {
     
   }
 
+const __filename$1 = url.fileURLToPath((typeof document === 'undefined' ? require('u' + 'rl').pathToFileURL(__filename).href : (_documentCurrentScript && _documentCurrentScript.src || new URL('bundle.js', document.baseURI).href)));
+const __dirname$1 = path.dirname(__filename$1);
+
+// Generamos el hash
+const createHash = password => bcrypt.hashSync(password, bcrypt.genSaltSync(10));
+
+// Validamos el hash
+const isValidPassword = (user, password) => {
+    console.log(`Datos a validar: user-password: ${user.password}, password: ${password} `);
+    return bcrypt.compareSync(password, user.password);
+};
+
+// JWT
+const PRIVATE_KEY = "CoderhouseBackendCourseSecretKeyJWT";
+
+const generateJWToken = (user) => {
+    return jwt.sign({ user }, PRIVATE_KEY, { expiresIn: "7d" });
+};
+
+const authToken = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    console.log("Token Present In Header Auth");
+    console.log('Headers:', req.headers);
+    console.log(authHeader);
+    if (!authHeader) {
+        return res.status(401).send({ error: "User pato Not Authenticated or missing token." })
+    }
+    const token = authHeader.split(' ')[1];
+
+    jwt.verify(token, PRIVATE_KEY, (error, credentials) => {
+        if (error) {
+            console.error("Error verifying token:", error);
+            return res.status(403).send({ error: "Token invalid, Unauthorized!" })
+        }
+        // Token ok
+        req.user = credentials.user;
+        console.log("User credentials from token:", req.user);
+        next();
+    });
+};
+
+
+// Para passportCall
+const passportCall = (strategy) => {
+    return async (req, res, next) => {
+        try {
+            await passport.authenticate(strategy, function (err, user, info) {
+                if (err) return next(err);
+                if (!user) {
+                    return res.status(401).send({ error: info.messages ? info.messages : info.toString() });
+                }
+                req.user = user;
+                next();
+            })(req, res, next);
+        } catch (error) {
+            console.error("Error en passportCall:", error);
+            next(error);
+        }
+    };
+};
+
+const authorization = (role) => {
+    return async (req, res, next) => {
+        try {
+            if (!req.user) {
+                // Si el usuario no está autenticado, puedes redirigirlo o renderizar la vista de error
+                // Puedes ajustar esto según tus necesidades
+                return res.status(401).render('error.hbs', { error: 'Unauthorized: User not found in JWT' });
+            }
+
+            if (!role.includes(req.user.role.toUpperCase())) {
+                // Si el usuario no tiene los permisos necesarios, renderiza la vista de error
+                // Puedes ajustar esto según tus necesidades
+                return res.status(403).render('error.hbs', { error: 'Forbidden: El usuario no tiene permisos con este rol.' });
+            }
+
+            next();
+        } catch (error) {
+            console.error("Error en authorization:", error);
+            // En caso de error, también puedes renderizar la vista de error
+            return res.status(500).render('error.hbs', { error: 'Internal Server Error' });
+        }
+    };
+};
+
+class UserService {
+    constructor(){
+        console.log("Calling users model using a service.");
+    };  
+   
+    Register = async (user) => {
+        try {
+            const exist = await userModel.findOne({ email: user.email });
+            console.log("Calling users model using a service.");
+
+            if (exist) {
+                console.log("El usuario ya existe");
+                return { success: false, message: "El usuario ya existe" };
+            }
+
+            const newUser = {
+                first_name: user.first_name,
+                last_name: user.last_name,
+                email: user.email,
+                age: user.age,
+                password: createHash(user.password),
+            };
+
+            const result = await userModel.create(newUser);
+
+            console.log(result);
+            return { success: true, message: "Registro exitoso", user: result };
+        } catch (error) {
+            console.error("Error registrando usuario:", error);
+            return { success: false, message: "Error registrando usuario" };
+        }
+    };
+
+
+
+
+
+
+
+    
+    findByUsername = async (username) => {
+        const result = await userModel.findOne({email: username});
+        return result;
+    };
+  
+}
+
+class UserRepository{
+    constructor(UserRepository){
+        this.UserRepository = UserRepository;
+    }
+    Register = (user) => {
+        return this.UserRepository.Register(user);
+    }
+    findByUsername = (username) => {
+        return this.UserRepository.findByUsername({email: username});
+    }
+}
+
+// ticket.model.js
+
+
+const ticketSchema = new mongoose.Schema({
+    code: {
+        type: String,
+        unique: true,
+    },
+    purchase_datetime: {
+        type: Date,
+        default: Date.now,
+    },
+    amount: {
+        type: Number,
+        required: true,
+    },
+    purchaser: {
+        type: String,
+        required: true,
+    },
+});
+
+// Middleware de pre-save para generar automáticamente el código
+ticketSchema.pre('save', async function (next) {
+    if (!this.code) {
+        // Generar un código único si no está establecido
+        this.code = generateUniqueTicketCode();
+    }
+    next();
+});
+
+// Función de generación de código único
+function generateUniqueTicketCode() {
+    return Math.random().toString(36).substring(2, 10).toUpperCase();
+}
+
+// Definir el modelo de Ticket
+const Ticket = mongoose.model('Ticket', ticketSchema);
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    port: 587,
+    auth: {
+        user: config.gmailAcount,
+        pass: config.gmailAppPassword,
+    }
+});
+
+const sendTicketByEmail = async (userEmail, ticketDetails) => {
+    const { purchase_datetime, amount } = ticketDetails;
+
+    // Cuerpo del correo con información del ticket
+    const mailOptions = {
+        from: "PreEntrega3-MatiasYacob " + config.gmailAcount,
+        to: userEmail,
+        subject: "Detalles del Ticket de Compra",
+        html: `
+            <div style="font-family: 'Arial', 'Helvetica', sans-serif; background-color: #ececec; padding: 20px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);">
+                <h2 style="color: #333; text-align: center; font-size: 24px; font-family: 'Times New Roman', Times, serif; font-weight: bold;">¡Gracias por tu compra!</h2>
+                <p style="font-size: 18px; margin-bottom: 10px; font-family: 'Verdana', sans-serif; font-weight: bold;">Aquí está el detalle de tu ticket:</p>
+                <p style="font-size: 18px; margin-bottom: 5px;">Fecha de Compra: ${purchase_datetime}</p>
+                <p style="font-size: 18px; margin-bottom: 20px;">Monto Total: $${amount}</p>
+                <!-- Otras propiedades del ticket aquí -->
+
+                <!-- Puedes agregar más estilos y detalles según sea necesario -->
+            </div>
+        `,
+    };
+
+    try {
+        const result = await transporter.sendMail(mailOptions);
+        console.log('Ticket enviado por correo exitosamente:', result);
+    } catch (error) {
+        console.error('Error al enviar el ticket por correo:', error);
+        throw error;
+    }
+};
+
+class TicketManager {
+    constructor() {}
+
+    async createTicket(userId) {
+        try {
+            const cart = await Cart.findOne({ user: userId });
+
+            if (!cart || cart.products.length === 0) {
+                throw new Error('No hay productos en el carrito para crear un ticket.');
+            }
+
+            const user = await userModel.findById(userId);
+            const ticket = new Ticket({
+                purchase_datetime: new Date(),
+                amount: this.calculateTotalAmount(cart.products),
+                purchaser: user.email,
+                products: cart.products,// hay que arreglar esto, seguramente es porque es un array de objetos
+            });
+
+            await ticket.save();
+
+            // Elimina todos los productos del carrito después de crear el ticket
+            await Cart.findOneAndUpdate({ user: userId }, { $set: { products: [] } });
+
+            console.log('Ticket creado exitosamente.');
+
+            // Llama al controlador de correo para enviar el ticket al usuario
+            await sendTicketByEmail(user.email, ticket);
+
+            return ticket;
+        } catch (error) {
+            console.error('Error al crear el ticket:', error);
+            throw error;
+        }
+    }
+
+    async getTicketsByUser(userId) {
+        try {
+            const user = await userModel.findById(userId);
+    
+            if (!user) {
+                console.log('Usuario no encontrado.');
+                return [];
+            }
+    
+            const tickets = await Ticket.find({ purchaser: user.email });
+    
+            console.log('Tickets obtenidos exitosamente para el usuario:', user.email);
+            
+            return tickets;
+        } catch (error) {
+            console.error('Error al obtener los tickets:', error);
+            throw error;
+        }
+    }
+
+    // Otras funciones relacionadas con la gestión de tickets...
+
+    // Función para calcular el monto total basado en los productos del carrito
+    calculateTotalAmount(products) {
+        return products.reduce((total, product) => total + product.quantity * product.price, 0);
+    }
+}
+
+class TicketRepository {
+    constructor(TicketManager) {
+      this.TicketManager = TicketManager;
+    }
+  
+    getAll = (userId) => {
+      return this.TicketManager.getTicketsByUser(userId);
+    }
+  
+    create = (userId) => {
+      return this.TicketManager.createTicket(userId);
+    }
+  
+   
+  }
+
 // Repository de Product
 
 const productManager = new ProductManager();
 const productRepository = new ProductRepository(productManager);
 
-const cartManager = new CartManager();  // Corregido: Cambiado el nombre de la constante
-const cartRepository = new CartRepository(cartManager);  // Corregido: Cambiado el nombre de la constante
+const cartManager = new CartManager();  
+const cartRepository = new CartRepository(cartManager);  
+
+const UserManager = new UserService();
+const userRepository = new UserRepository(UserManager);
+const ticketManager = new TicketManager();
+const ticketRepository = new TicketRepository(ticketManager);
 
 // Función para obtener todos los productos con filtros y paginación
 async function getProducts(req, res) {
@@ -716,105 +1026,20 @@ async function updateProductById(req, res) {
     }
 }
 
-const __filename$1 = url.fileURLToPath((typeof document === 'undefined' ? require('u' + 'rl').pathToFileURL(__filename).href : (_documentCurrentScript && _documentCurrentScript.src || new URL('bundle.js', document.baseURI).href)));
-const __dirname$1 = path.dirname(__filename$1);
-
-// Generamos el hash
-const createHash = password => bcrypt.hashSync(password, bcrypt.genSaltSync(10));
-
-// Validamos el hash
-const isValidPassword = (user, password) => {
-    console.log(`Datos a validar: user-password: ${user.password}, password: ${password} `);
-    return bcrypt.compareSync(password, user.password);
-};
-
-// JWT
-const PRIVATE_KEY = "CoderhouseBackendCourseSecretKeyJWT";
-
-const generateJWToken = (user) => {
-    return jwt.sign({ user }, PRIVATE_KEY, { expiresIn: "7d" });
-};
-
-const authToken = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    console.log("Token Present In Header Auth");
-    console.log('Headers:', req.headers);
-    console.log(authHeader);
-    if (!authHeader) {
-        return res.status(401).send({ error: "User pato Not Authenticated or missing token." })
-    }
-    const token = authHeader.split(' ')[1];
-
-    jwt.verify(token, PRIVATE_KEY, (error, credentials) => {
-        if (error) {
-            console.error("Error verifying token:", error);
-            return res.status(403).send({ error: "Token invalid, Unauthorized!" })
-        }
-        // Token ok
-        req.user = credentials.user;
-        console.log("User credentials from token:", req.user);
-        next();
-    });
-};
-
-
-// Para passportCall
-const passportCall = (strategy) => {
-    return async (req, res, next) => {
-        try {
-            await passport.authenticate(strategy, function (err, user, info) {
-                if (err) return next(err);
-                if (!user) {
-                    return res.status(401).send({ error: info.messages ? info.messages : info.toString() });
-                }
-                req.user = user;
-                next();
-            })(req, res, next);
-        } catch (error) {
-            console.error("Error en passportCall:", error);
-            next(error);
-        }
-    };
-};
-
-const authorization = (role) => {
-    return async (req, res, next) => {
-        try {
-            if (!req.user) {
-                // Si el usuario no está autenticado, puedes redirigirlo o renderizar la vista de error
-                // Puedes ajustar esto según tus necesidades
-                return res.status(401).render('error.hbs', { error: 'Unauthorized: User not found in JWT' });
-            }
-
-            if (!role.includes(req.user.role.toUpperCase())) {
-                // Si el usuario no tiene los permisos necesarios, renderiza la vista de error
-                // Puedes ajustar esto según tus necesidades
-                return res.status(403).render('error.hbs', { error: 'Forbidden: El usuario no tiene permisos con este rol.' });
-            }
-
-            next();
-        } catch (error) {
-            console.error("Error en authorization:", error);
-            // En caso de error, también puedes renderizar la vista de error
-            return res.status(500).render('error.hbs', { error: 'Internal Server Error' });
-        }
-    };
-};
-
-const router$5 = express.Router();
+const router$6 = express.Router();
 
 // Rutas
 // Ruta para eliminar un producto del carrito ("/cart/:productId")
-router$5.delete('/:productId', passportCall('jwt'), authorization(['ADMIN','USUARIO']), deleteProduct);
+router$6.delete('/:productId', passportCall('jwt'), authorization(['ADMIN']), deleteProduct);
 
 
 // Ruta para agregar un nuevo producto
-router$5.post('/', passportCall('jwt'), authorization(['ADMIN','USUARIO']), addProduct);
+router$6.post('/', passportCall('jwt'), authorization(['ADMIN']), addProduct);
 
 
 
 // Ruta para obtener todos los productos con filtros y paginación
-router$5.get('/', getProducts);
+router$6.get('/', getProducts);
 
 
 
@@ -822,10 +1047,10 @@ router$5.get('/', getProducts);
 
 
 // Ruta para obtener un producto por su _id
-router$5.get('/:_id', getProductById);
+router$6.get('/:_id', getProductById);
 
 // Ruta para actualizar un producto por su ID
-router$5.put('/:id', updateProductById);
+router$6.put('/:id', updateProductById);
 
 const manager = new CartManager();
 
@@ -968,24 +1193,38 @@ const getProductsInCartWithDetails = async (req, res) => {
     }
 };
 
+const createTicket = async (req, res) => {
+    const userId = req.user._id;  // Ajusta según cómo estás manejando el ID del usuario
+    try {
+        const ticket = await ticketRepository.create(userId);
+        res.status(201).json(ticket);
+    } catch (error) {
+        console.error('Error al crear el ticket:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
 // routes/cart.router.js
 
 
-const router$4 = express.Router();
+const router$5 = express.Router();
 
 
 
-router$4.post('/:productId', passportCall('jwt'), authorization(['USUARIO']), AddProductToCart);
 
-router$4.delete('/:productId', passportCall('jwt'), authorization(['USUARIO']), removeProductFromCart);
+router$5.post('/tickets/create', passportCall('jwt'), authorization(['USUARIO']), createTicket);
 
-router$4.delete('/', passportCall('jwt'), authorization(['USUARIO']), removeAllProductsFromCart);
+router$5.post('/:productId', passportCall('jwt'), authorization(['USUARIO']), AddProductToCart);
 
-router$4.put('/:_id', updateProductQuantity);
+router$5.delete('/:productId', passportCall('jwt'), authorization(['USUARIO']), removeProductFromCart);
 
-router$4.put('/cart/:_id', updateCart);
+router$5.delete('/', passportCall('jwt'), authorization(['USUARIO']), removeAllProductsFromCart);
 
-router$4.get('/cart/:cid', getProductsInCartWithDetails);
+router$5.put('/:_id', updateProductQuantity);
+
+router$5.put('/cart/:_id', updateCart);
+
+router$5.get('/cart/:cid', getProductsInCartWithDetails);
 
 const UsersController = {};
 
@@ -1024,34 +1263,35 @@ UsersController.getUserById = async (req, res) => {
     }
 };
 
-const router$3 = express.Router();
+const router$4 = express.Router();
 
 // Renderiza la vista de inicio de sesión
-router$3.get("/login", UsersController.renderLogin);
+router$4.get("/login", UsersController.renderLogin);
 
 // Renderiza la vista de registro
-router$3.get("/register", UsersController.renderRegister);
+router$4.get("/register", UsersController.renderRegister);
 
 // Renderiza la vista del perfil de usuario
-router$3.get("/", passportCall('jwt'), UsersController.renderProfile);
+router$4.get("/", passportCall('jwt'), UsersController.renderProfile);
 
 // Obtiene información del usuario por ID
-router$3.get("/:userId", authToken, UsersController.getUserById);
+router$4.get("/:userId", authToken, UsersController.getUserById);
 
 // Importación de módulos y dependencias necesarios
 
+
 // Creación de una instancia de Router
-const router$2 = express.Router();
+const router$3 = express.Router();
 
 // Rutas públicas
 
 // Ruta raíz ("/")
-router$2.get("/", (req, res) => {
+router$3.get("/", (req, res) => {
     res.render("home.hbs");
 });
 
 // Ruta para visualizar productos en tiempo real ("/realtimeproducts")
-router$2.get('/realtimeproducts', passportCall('jwt'), authorization('USUARIO'), async (req, res) => {
+router$3.get('/realtimeproducts', passportCall('jwt'), authorization(['ADMIN']), async (req, res) => {
     try {
         await getProducts(req, res);
     } catch (error) {
@@ -1059,9 +1299,26 @@ router$2.get('/realtimeproducts', passportCall('jwt'), authorization('USUARIO'),
         res.status(500).send('Error interno del servidor');
     }
 });
+router$3.get('/tickets', passportCall('jwt'), authorization(['ADMIN', 'USUARIO']), async (req, res) => {
+    const userId = req.user._id;
+
+    try {
+        const tickets = await ticketRepository.getAll(userId);
+        console.log(userId);
+
+        // Renderiza la vista y pasa los datos de los tickets como un objeto
+        res.render("tickets.hbs", { tickets });
+    } catch (error) {
+        console.error('Error al obtener los tickets:', error);
+        res.status(500).send('Error interno del servidor');
+    }
+});
+
+
+
 
 // Ruta para visualizar productos para uso del usuario
-router$2.get("/products", passportCall('jwt'), authorization(['ADMIN', 'USUARIO']), async (req, res) => {
+router$3.get("/products", passportCall('jwt'), authorization(['ADMIN', 'USUARIO']), async (req, res) => {
     try {
         await getProductsUser(req, res);
     } catch (error) {
@@ -1071,13 +1328,13 @@ router$2.get("/products", passportCall('jwt'), authorization(['ADMIN', 'USUARIO'
 });
 
 // Ruta para acceder al chat ("/chat")
-router$2.get("/chat", (req, res) => {
+router$3.get("/chat", (req, res) => {
     res.render("chat.hbs");
 });
 
 // Ruta para visualizar productos en el carrito ("/cart")
 
-router$2.get("/cart", passportCall('jwt'), authorization(['ADMIN', 'USUARIO']), async (req, res) => {
+router$3.get("/cart", passportCall('jwt'), authorization(['ADMIN', 'USUARIO']), async (req, res) => {
     try {
         await getProductsInCartController(req, res);
         
@@ -1087,7 +1344,7 @@ router$2.get("/cart", passportCall('jwt'), authorization(['ADMIN', 'USUARIO']), 
     }
 });
 // Ruta para manejar sesiones ("/session")
-router$2.get('/session', (req, res) => {
+router$3.get('/session', (req, res) => {
     if (req.session.counter) {
         req.session.counter++;
         res.send(`Se ha visitado este sitio: ${req.session.counter} veces.`);
@@ -1098,7 +1355,7 @@ router$2.get('/session', (req, res) => {
 });
 
 // Ruta para cerrar sesión ("/logout")
-router$2.get('/logout', (req, res) => {
+router$3.get('/logout', (req, res) => {
     req.session.destroy(error => {
         if (error) {
             res.json({ error: "Error logout", msg: "Error al cerrar la sesión" });
@@ -1118,9 +1375,24 @@ SessionsController.githubCallback = passport.authenticate('github', {
 });
 
 // Passport local - Registro
-SessionsController.register = passport.authenticate('register', {
-    failureRedirect: "/fail-register",
-});
+SessionsController.register = async (req, res) => {
+    try {
+        const result = await userRepository.Register(req.body);
+
+        if (result.success) {
+            // Si el registro es exitoso, puedes generar un token JWT aquí si es necesario
+            const access_token = generateJWToken(result.user);
+            console.log(access_token);
+
+            res.status(201).json({ success: true, message: "Registro exitoso", user: result.user, access_token });
+        } else {
+            res.status(400).json({ success: false, message: result.message });
+        }
+    } catch (error) {
+        console.error("Error en el servidor:", error);
+        res.status(500).json({ success: false, message: "Error en el servidor", error });
+    }
+};
 
 // Passport local - Inicio de sesión
 SessionsController.login = passport.authenticate('login', {
@@ -1156,38 +1428,38 @@ SessionsController.getToken = (req, res) => {
     res.send({ access_token: access_token });
 };
 
-const router$1 = express.Router();
+const router$2 = express.Router();
 
 // Passport GitHub
-router$1.get('/github', SessionsController.githubAuth);
-router$1.get("/githubcallback", SessionsController.githubCallback);
+router$2.get('/github', SessionsController.githubAuth);
+router$2.get("/githubcallback", SessionsController.githubCallback);
 
 // Passport local - Registro
-router$1.post('/register', SessionsController.register, (req, res) => {
+router$2.post('/register', SessionsController.register, (req, res) => {
     console.log("Registrando usuario:");
     // Puedes manejar la respuesta aquí y decidir si redirigir o enviar otra respuesta.
     res.status(201).send("Registro exitoso");
 });
 
 // Passport local - Inicio de sesión
-router$1.post('/login', SessionsController.login, SessionsController.getToken);
+router$2.post('/login', SessionsController.login, SessionsController.getToken);
 
 // Logout
-router$1.post('/logout', SessionsController.logout);
+router$2.post('/logout', SessionsController.logout);
 
 // Error en el registro
-router$1.get("/fail-register", SessionsController.failRegister);
+router$2.get("/fail-register", SessionsController.failRegister);
 
 // Error en el inicio de sesión
-router$1.get("/fail-login", SessionsController.failLogin);
+router$2.get("/fail-login", SessionsController.failLogin);
 
-const router = express.Router();
+const router$1 = express.Router();
 
-router.get("/login",(req, res)=>{
+router$1.get("/login",(req, res)=>{
     res.render("github-login");
 });
 
-router.get("/error",(req, res)=>{
+router$1.get("/error",(req, res)=>{
     res.render("error",{error: "No se pudo autenticar usando GitHub"});
 });
 
@@ -1247,6 +1519,10 @@ jwtRouter.get('/ruta-usuario', passportCall('jwt'), authorization('USUARIO'), (r
     console.log('Contenido del token:', req.user);
     res.send('Bienvenido a la vista de usuario');
 });
+
+//import { sendEmail, sendEmailWithAttachment } from "../controllers/EmailController.js";
+
+const router = express.Router();
 
 class CustomRouter {
     constructor() {
@@ -1359,31 +1635,6 @@ class CustomRouter {
                 item[1].status(500).send(error);
             }
         });
-    }
-}
-
-class UserService {
-    constructor(){
-        console.log("Calling users model using a service.");
-    };  
-    getAll = async () => {
-        let users = await userModel.find();
-        return users.map(user=>user.toObject());
-    };
-    save = async (user) => {
-        let result = await userModel.create(user);
-        return result;
-    };
-    findByUsername = async (username) => {
-        const result = await userModel.findOne({email: username});
-        return result;
-    };
-    update = async (filter, value) => {
-        console.log("Update user with filter and value:");
-        console.log(filter);
-        console.log(value);
-        let result = await userModel.updateOne(filter, value);
-        return result;
     }
 }
 
@@ -1505,9 +1756,9 @@ function initializeApp(app, __dirname) {
   app.set('view engine', 'hbs');
   app.set('views', `${__dirname}/views`);
   
-  app.use('/api/product', router$5);
-  app.use('/api/cart', router$4);
-  app.use('/', router$2);
+  app.use('/api/product', router$6);
+  app.use('/api/cart', router$5);
+  app.use('/', router$3);
   
   app.use('/public', (req, res, next) => {
     if (req.url.endsWith('.js')) {
@@ -1550,6 +1801,8 @@ class MongoSingleton {
     }
 }
 
+const localStrategy = passportLocal.Strategy;
+
 const JwtStrategy = jwtStrategy.Strategy;
 const ExtractJWT = jwtStrategy.ExtractJwt;
 
@@ -1562,8 +1815,8 @@ const initializePassport = () => {
         }, async (jwt_payload, done) => {
             console.log("Entrando a passport Strategy con JWT.");
             try {
-                console.log("JWT obtenido del payload");
-                console.log(jwt_payload);
+                console.log("JWT obtenido del payload: " + jwt_payload.user.name);
+                
                 return done(null, jwt_payload.user);
             } catch (error) {
                 console.error(error);
@@ -1586,15 +1839,61 @@ const initializePassport = () => {
     });
 };
 
+passport.use('register', new localStrategy(
+    {
+        passReqToCallback: true,
+        usernameField: 'email'
+    },
+    async (req, username, password, done) => {
+
+        const { first_name, last_name, email, age } = req.body;
+
+        try {
+            const exist = await userModel.findOne({ email });
+            if (exist) {
+                console.log("El usuario ya existe");
+                return done(null, false);
+            }
+
+            const user = {
+                first_name,
+                last_name,
+                email,
+                age,
+                //se encripta después
+                password: createHash(password)
+            };
+
+            const result = await userModel.create(user);
+
+            //todo ok
+            console.log(result);
+            return done(null, result);
+        } catch (error) {
+            return done("Error registrando usuario: " + error);
+        }
+    }
+));
+
+
+
+
+
+
+
+
+
+
+
 const cookieExtractor = req => {
     let token = null;
     console.log("Entrando a Cookie Extractor");
     if (req && req.cookies) { //Validamos que exista el request y las cookies.
-        console.log("Cookies presentes: ");
-        console.log(req.cookies);
-        token = req.cookies['jwtCookieToken'];
-        //console.log("Token obtenido desde Cookie:");
-        console.log(token);
+    console.log("Cookies Encontradas! ");
+        
+       token = req.cookies['jwtCookieToken'];
+       console.log("Token obtenido!");
+        
     }
     return token;
 };
@@ -1677,12 +1976,13 @@ mongoInstance();
 initializeApp(app, __dirname$1);
 
 // Definición de rutas para la API y las vistas
-app.use('/api/product', router$5);
-app.use('/api/carts', router$4);
-app.use('/', router$2);
-app.use('/api/sessions', router$1);
-app.use('/users', router$3);
-app.use('/github', router);
+app.use('/api/email',router);
+app.use('/api/product', router$6);
+app.use('/api/carts', router$5);
+app.use('/', router$3);
+app.use('/api/sessions', router$2);
+app.use('/users', router$4);
+app.use('/github', router$1);
 app.use('/api/jwt', jwtRouter);
 
 
