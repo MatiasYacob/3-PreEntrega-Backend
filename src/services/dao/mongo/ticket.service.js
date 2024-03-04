@@ -44,6 +44,7 @@ class TicketManager {
             console.error('Error al crear el ticket:', error.message); // Imprime solo el mensaje del error
         
             if (error.message.includes('No hay suficiente stock')) {
+                await Cart.findOneAndUpdate({ user: userId }, { $set: { products: [] } });
                 throw new Error('No hay suficiente stock para completar la compra. Por favor, consulta con un vendedor.');
             }
         

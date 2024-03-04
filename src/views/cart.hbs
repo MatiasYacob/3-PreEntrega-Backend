@@ -238,10 +238,15 @@ async function checkout() {
 
         // Mostrar un mensaje de error al usuario con SweetAlert2
         Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: obtenerMensajeError(error),
-        });
+        icon: 'error',
+        title: 'Error',
+        text: obtenerMensajeError(error),
+    }).then((result) => {
+        // Después de hacer clic en el botón "Aceptar", recarga la página
+        if (result.isConfirmed) {
+            location.reload();
+        }
+    });
     }
 }
 
